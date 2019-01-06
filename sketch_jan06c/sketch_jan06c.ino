@@ -43,6 +43,8 @@ unsigned char node_name_str_length[3] = {5,5,3};
 char command_testConnect[TESTCONNECT_LEN] = {'T','E','S','T','C','O','N','N','E','C','T'};
 #define GETDATA_LEN         7
 char command_getData[GETDATA_LEN] = {'G','E','T','D','A','T','A'};
+#define UPDATEDATA_LEN      10
+char command_updatedata[UPDATEDATA_LEN] = {'U','P','D','A','T','E','D','A','T','A'};
 
 char rec[200];
 unsigned int index_rec = 0;
@@ -57,6 +59,8 @@ void loop() {
   
 }
 
+//Process Check-Connect command from sever
+//Format data: NODEID-CHECKCONNECT
 void CheckConnect(){
   int j;
   //Calculate Length of String Receive 
@@ -113,20 +117,21 @@ void CheckConnect(){
   //OK, GetData Command correct. Now get data and Transfer data to sever  
   //Transfer String response 
   /*Format:
-      NODENAME_ID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)     
+      NODEID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)     
   */
   //Transfer Node name
   for(j = 0; j < 5; j++){
-    if(node_name_str[NODE][j] == ' '){        //Break when array is null
+    if(node_name_str[NODE][j] == ' '){            //Break when array is null
       break;
     }
     Serial.print(node_name_str[NODE][j]);    
   }  
-  Serial.print(ID_NODE);                      //Transfer ID Node
+  Serial.print(ID_NODE);                          //Transfer ID Node
   Serial.print("_");
-  Serial.print("CONNECT");                       //Transfer Connect string
+  Serial.print("CONNECT");                        //Transfer Connect string
   Serial.print("_");
-  Serial.println("OK");
+  Serial.print("OK");
+  Serial.println("");                             //End of transfer
 
   #ifdef DEBUG
     Serial.println("CHECK_CONNECT OK - End Function");
@@ -191,6 +196,8 @@ void CheckConnect(){
   }*/
 }
 
+//Process Get-Data command from sever
+//Format data: NODEID-GETDATA
 void GetData(){
   int j;
   //Calculate Length of String Receive 
@@ -248,9 +255,9 @@ void GetData(){
   //OK, GetData Command correct. Now get data and Transfer data to sever  
   //Transfer String response 
   /*Format:
-      RLACS: NODENAME_ID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)
-      RLTDS: NODENAME_ID_DATA_D_(ON/OFF)_TDS_(int)
-      THL:   NODENAME_ID_DATA_T_(int)_H_(int)_L_(int)
+      RLACS: NODEID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)
+      RLTDS: NODEID_DATA_D_(ON/OFF)_TDS_(int)
+      THL:   NODEID_DATA_T_(int)_H_(int)_L_(int)
   */
   //Transfer Node name
   for(j = 0; j < 5; j++){
@@ -339,8 +346,158 @@ void GetData(){
   #endif
 }
 
+//Process Update-Data command from sever
+//Format data: NODEID-UPDATEDATA-PIN-STATUS
 void UpdateData(){
+  int j, len, len_status_str, len_pin_str;
+  #ifdef DEBUG
+    Serial.println("UPDATEDATA");
+  #endif
+
+  //Get Status Data Update to calculate length of status from string receive
+  if((rec[index_rec - 2] == 'O')&&(rec[index_rec - 1] == 'N')){
+    //Calculate Length of String Receive
+    len_status_str = 2;     //Length of 'ON' string     
+  }
+  else{
+    if((rec[index_rec - 3] == 'O')&&(rec[index_rec - 2] == 'F')&&(rec[index_rec - 1] == 'F')){
+      //Calculate Length of String Receive
+      len_status_str = 3;     //Length of status 'OFF' string        
+    }
+    else{
+      #ifdef DEBUG 
+        Serial.println("UPDATEDATA-ERROR-Not Detect Status PIN");
+      #endif
+      return;
+    }
+  }
+
+  //Get length of pin str on string receive
+  if(rec[index_rec - 4 - len_status_str] == '_'){
+    len_pin_str = 2;
+  }
+  else{
+    if(rec[index_rec - 3 - len_status_str] == '_'){
+      len_pin_str = 1;
+    }
+    else{
+      #ifdef DEBUG 
+        Serial.println("UPDATEDATA-ERROR-Not Detect PIN");
+      #endif
+      return;
+    }
+  }
+
+  //Calculate length of string receive from uart
+  len = UPDATEDATA_LEN + ID_NODE_LENGTH + node_name_str_length[NODE] + 3 + len_pin_str + len_status_str;  //3 space '_'  in str receive
+
+  /*if(len_status_str == 2){      //If status = 'ON'
+    if(rec[index_rec - 6] == '_'){
+      len_pin_str = 2;
+    }
+    else{
+      if(rec[index_rec - 5] == '_'){
+        len_pin_str = 1;
+      }
+      else{
+        #ifdef DEBUG 
+          Serial.println("UPDATEDATA-ERROR-Not Detect PIN");
+        #endif
+        return;
+      }
+    }
+  }
+  else{                         //If status = 'OFF' (3)
+    if(rec[index_rec - 7] == '_'){
+      len_pin_str = 2;
+    }
+    else{
+      if(rec[index_rec - 6] == '_'){
+        len_pin_str = 1;
+      }
+      else{
+        #ifdef DEBUG 
+          Serial.println("UPDATEDATA-ERROR-Not Detect PIN");
+        #endif
+        return;
+      }
+    }
+  }*/
+
+  //Check String "UpdateData" command of string receive
+  for(j = UPDATEDATA_LEN; j > 0; j--){        
+    if(rec[index_rec - UPDATEDATA_LEN + j - 1 - len_pin_str - len_status_str - 2] != command_updatedata[j - 1]){ //Compare     //2 space '_' in str receive
+      #ifdef DEBUG 
+        Serial.println("UPDATEDATA-ERROR-Command Incorect");
+      #endif
+      return;
+    }
+  }
+
+  //Check Name of Node on string receive, if different then return
+  for(j = node_name_str_length[NODE]; j > 0; j--){  
+    if((index_rec - len + j - 1) >= 0){                                 //Check index over max array (rec)      
+      if(rec[index_rec - len + j - 1] != node_name_str[NODE][j - 1]){   //Check character of string receive vs node name string
+        #ifdef DEBUG 
+          Serial.println("UPDATEDATA-ERROR-Node Name Incorect");
+        #endif
+        return;
+      }
+    }
+    else{
+      if(rec[200 - index_rec + len - j - 1 - 2] != node_name_str[NODE][j - 1]){
+        #ifdef DEBUG 
+          Serial.println("UPDATEDATA-ERROR-Node Name Incorect");
+        #endif
+        return;
+      }
+    }
+  }
+
+  //Check ID Node Number of node
+  int node_index_temp = 0;    //init id node index data  
+  //Calculate id Node number from string
+  for(j = 0; j < ID_NODE_LENGTH > 0; j++){
+    node_index_temp = node_index_temp*10 + rec[index_rec - len + node_name_str_length[NODE] + j] - 48;    
+  }  
   
+  //Compare ID Number from String receive vs ID Node(Setup)
+  if(node_index_temp != ID_NODE){
+    #ifdef DEBUG 
+      Serial.println("UPDATEDATA-ERROR-IDNode Incorect");
+    #endif
+    return;
+  }
+
+  //OK, UpdateData Command correct. Now get data and Transfer data to sever  
+  //Transfer String response 
+  /*Format:
+      NODEID_UPDATE_PIN_STATUS
+  */
+  //Transfer Node name
+  for(j = 0; j < 5; j++){
+    if(node_name_str[NODE][j] == ' '){          //Break when array is null
+      break;
+    }
+    Serial.print(node_name_str[NODE][j]);    
+  }
+  Serial.print(ID_NODE);                        //Transfer ID Node
+  Serial.print("_");
+  Serial.print("UPDATE");                       //Transfer Data string
+  Serial.print("_");
+  Serial.print(rec[index_rec - len_status_str - 1 - len_pin_str]);    //1 space '_' on string         
+  if(len_pin_str == 2){     //If pin = D2,D1 and not if pin = D
+    Serial.print(rec[index_rec - len_status_str - 1 - len_pin_str + 1]);    //1 space '_' on string     //Transfer digit of pin
+  }
+  Serial.print("_");
+  Serial.print("OK");
+  Serial.println("");                           //End of transfer
+  //Transfer data of each node
+  #ifdef DEBUG
+    Serial.println("UPDATEDATA-OK-End Function");
+  #endif
+
+ 
 }
 void serialEvent() {
   while (Serial.available()) {    
@@ -349,6 +506,7 @@ void serialEvent() {
     if(rec[index_rec] == '\n'){
       CheckConnect();
       GetData();
+      UpdateData();
     }
     index_rec++;    
     if(index_rec == 200) index_rec = 0;
