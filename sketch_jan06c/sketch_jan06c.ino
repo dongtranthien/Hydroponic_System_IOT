@@ -16,8 +16,21 @@ enum node_type {
 const unsigned char ID_NODE = 27;
 const unsigned char NODE = RLACS;
 
+//Hardware of RLACS Node
+#define PIN_D1    3
+#define PIN_D2    4
+#define PIN_A1    A0
+#define PIN_A2    A1
+//Hardware of RLTDS Node
+#define PIN_D     5
+#define PIN_TDS   A2
+//Hardware of THL Node
+#define PIN_T     A3
+#define PIN_H     A4
+#define PIN_L     A5
+
 #define ID_NODE_LENGTH      2
-#define DEBUG
+//#define DEBUG
 char rlacs_node[5] = {'R','L','A','C','S'};
 char rltds_node[5] = {'R','L','T','D','S'};
 char thl_node[3] = {'T','H','L'};
@@ -107,6 +120,10 @@ void GetData(){
   //Calculate Length of String Receive 
   int len = GETDATA_LEN + ID_NODE_LENGTH + node_length[NODE];
 
+  #ifdef DEBUG
+    Serial.println("GETDATA");
+  #endif
+
   //Check String "GetData" command of string receive
   for(j = GETDATA_LEN; j > 0; j--){    
     if(rec[index_rec - GETDATA_LEN + j - 1] != command_getData[j - 1]){ //Compare
@@ -152,7 +169,98 @@ void GetData(){
     return;
   }
 
-  Serial.println("GETDATA OK");
+  //OK, GetData Command correct. Now get data and Transfer data to sever  
+  //Transfer String response 
+  /*Format:
+      RLACS: NODENAME_ID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)
+      RLTDS: NODENAME_ID_DATA_D_(ON/OFF)_TDS_(int)
+      THL:   NODENAME_ID_DATA_T_(int)_H_(int)_L_(int)
+  */
+  //Transfer Node name
+  for(j = 0; j < 5; j++){
+    if(node_name_str[NODE][j] == ' '){        //Break when array is null
+      break;
+    }
+    Serial.print(node_name_str[NODE][j]);    
+  }  
+  Serial.print("_");
+  Serial.print(ID_NODE);                      //Transfer ID Node
+  Serial.print("_");
+  Serial.print("DATA");                       //Transfer Data string
+  Serial.print("_");
+  //Transfer data of each node
+  switch(NODE){
+    case RLACS:{                              //RLACS Node Type
+      //Get and transfer D1 data
+      Serial.print("D1");
+      Serial.print("_");
+      if(digitalRead(PIN_D1) == HIGH){
+        Serial.print("ON");
+        Serial.print("_");
+      }
+      else{
+        Serial.print("OFF");
+        Serial.print("_");
+      }
+      //Get and transfer D2 data
+      Serial.print("D2");
+      Serial.print("_");
+      if(digitalRead(PIN_D2) == HIGH){
+        Serial.print("ON");
+        Serial.print("_");
+      }
+      else{
+        Serial.print("OFF");
+        Serial.print("_");
+      }
+      //Get and transfer A1 data
+      Serial.print("A1");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_A1));
+      Serial.print("_");
+      //Get and transfer A2 data
+      Serial.print("A2");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_A2));
+      break;
+    }
+    case RLTDS:{                              //RLTDS Node Type
+      //Get and transfer D data
+      Serial.print("D");
+      Serial.print("_");
+      if(digitalRead(PIN_D) == HIGH){
+        Serial.print("ON");
+        Serial.print("_");
+      }
+      else{
+        Serial.print("OFF");
+        Serial.print("_");
+      }
+      //Get and transfer TDS data
+      Serial.print("TDS");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_TDS)); 
+      break;
+    }    
+    case THL:{                              //THL Node Type
+      //Get and transfer T data
+      Serial.print("T");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_T)); 
+      //Get and transfer H data
+      Serial.print("H");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_H)); 
+      //Get and transfer L data
+      Serial.print("L");
+      Serial.print("_");
+      Serial.print(analogRead(PIN_L)); 
+      break;
+    }
+  }
+  #ifdef DEBUG
+    Serial.println("GETDATA OK - End Function");
+  #endif
 }
 
 void UpdateData(){
