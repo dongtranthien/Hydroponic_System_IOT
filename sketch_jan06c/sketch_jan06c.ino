@@ -13,9 +13,9 @@ enum node_type {
 };
 
 //Modified
+//ID and Type Node
 const unsigned char ID_NODE = 27;
 const unsigned char NODE = RLACS;
-
 //Hardware of RLACS Node
 #define PIN_D1    3
 #define PIN_D2    4
@@ -37,7 +37,7 @@ char thl_node[3] = {'T','H','L'};
 char node_name_str[3][5] = {{'R','L','A','C','S'},
                             {'R','L','T','D','S'},
                             {'T','H','L',' ',' '}};
-unsigned char node_length[3] = {5,5,3};
+unsigned char node_name_str_length[3] = {5,5,3};
 
 #define TESTCONNECT_LEN     11
 char command_testConnect[TESTCONNECT_LEN] = {'T','E','S','T','C','O','N','N','E','C','T'};
@@ -58,7 +58,83 @@ void loop() {
 }
 
 void CheckConnect(){
-  int j, id_temp = 0;
+  int j;
+  //Calculate Length of String Receive 
+  int len = TESTCONNECT_LEN + ID_NODE_LENGTH + node_name_str_length[NODE] + 1;  //1 space '_' in str receive
+
+  #ifdef DEBUG
+    Serial.println("CHECK_CONNECT");
+  #endif
+
+  //Check String "TestConnect" command of string receive
+  for(j = TESTCONNECT_LEN; j > 0; j--){        
+    if(rec[index_rec - TESTCONNECT_LEN + j - 1] != command_testConnect[j - 1]){ //Compare
+      #ifdef DEBUG 
+        Serial.println("CHECK_CONNECT-ERROR-Command Incorect");
+      #endif
+      return;
+    }
+  }
+  
+  //Check Name of Node on string receive, if different then return
+  for(j = node_name_str_length[NODE]; j > 0; j--){    
+    if((index_rec - len + j - 1) >= 0){                                 //Check index over max array (rec)      
+      if(rec[index_rec - len + j - 1] != node_name_str[NODE][j - 1]){   //Check character of string receive vs node name string
+        #ifdef DEBUG 
+          Serial.println("CHECK_CONNECT-ERROR-Node Name Incorect");
+        #endif
+        return;
+      }
+    }
+    else{
+      if(rec[200 - index_rec + len - j - 1] != node_name_str[NODE][j - 1]){
+        #ifdef DEBUG 
+          Serial.println("CHECK_CONNECT-ERROR-Node Name Incorect");
+        #endif
+        return;
+      }
+    } 
+  }
+
+  //Check ID Node Number of node
+  int node_index_temp = 0;    //init id node index data  
+  //Calculate id Node number from string
+  for(j = 0; j < ID_NODE_LENGTH > 0; j++){
+    node_index_temp = node_index_temp*10 + rec[index_rec - len + node_name_str_length[NODE] + j] - 48;    
+  }    
+  //Compare ID Number from String receive vs ID Node(Setup)
+  if(node_index_temp != ID_NODE){
+    #ifdef DEBUG 
+      Serial.println("CHECK_CONNECT-ERROR-IDNode Incorect");
+    #endif
+    return;
+  }
+
+  //OK, GetData Command correct. Now get data and Transfer data to sever  
+  //Transfer String response 
+  /*Format:
+      NODENAME_ID_DATA_D1_(ON/OFF)_D2_(ON/OFF)_A1_(int)_A2_(int)     
+  */
+  //Transfer Node name
+  for(j = 0; j < 5; j++){
+    if(node_name_str[NODE][j] == ' '){        //Break when array is null
+      break;
+    }
+    Serial.print(node_name_str[NODE][j]);    
+  }  
+  Serial.print(ID_NODE);                      //Transfer ID Node
+  Serial.print("_");
+  Serial.print("CONNECT");                       //Transfer Connect string
+  Serial.print("_");
+  Serial.println("OK");
+
+  #ifdef DEBUG
+    Serial.println("CHECK_CONNECT OK - End Function");
+  #endif
+
+  
+  
+  /*int j, id_temp = 0;
   for(j = 0; j < 11; j++){
     if((index_rec - 1 - j) >= 0){      
       if(rec[index_rec - 1 - j] != command_testConnect[10 - j]){
@@ -112,13 +188,13 @@ void CheckConnect(){
         break;
       }
     }
-  }   
+  }*/
 }
 
 void GetData(){
   int j;
   //Calculate Length of String Receive 
-  int len = GETDATA_LEN + ID_NODE_LENGTH + node_length[NODE];
+  int len = GETDATA_LEN + ID_NODE_LENGTH + node_name_str_length[NODE] + 1;  //1 space '_'  in str receive
 
   #ifdef DEBUG
     Serial.println("GETDATA");
@@ -135,7 +211,7 @@ void GetData(){
   }
   
   //Check Name of Node on string receive, if different then return
-  for(j = node_length[NODE]; j > 0; j--){    
+  for(j = node_name_str_length[NODE]; j > 0; j--){    
     if((index_rec - len + j - 1) >= 0){                                 //Check index over max array (rec)      
       if(rec[index_rec - len + j - 1] != node_name_str[NODE][j - 1]){   //Check character of string receive vs node name string
         #ifdef DEBUG 
@@ -145,7 +221,7 @@ void GetData(){
       }
     }
     else{
-      if(rec[200 - index_rec + len - j - 1] != node_name_str[NODE][j - 1]){
+      if(rec[200 - index_rec + len - j - 1 - 2] != node_name_str[NODE][j - 1]){
         #ifdef DEBUG 
           Serial.println("Error-GetData-Node Name Incorect");
         #endif
@@ -158,7 +234,7 @@ void GetData(){
   int node_index_temp = 0;    //init id node index data  
   //Calculate id Node number from string
   for(j = 0; j < ID_NODE_LENGTH > 0; j++){
-    node_index_temp = node_index_temp*10 + rec[index_rec - len + node_length[NODE] + j] - 48;    
+    node_index_temp = node_index_temp*10 + rec[index_rec - len + node_name_str_length[NODE] + j] - 48;    
   }  
   
   //Compare ID Number from String receive vs ID Node(Setup)
@@ -182,8 +258,7 @@ void GetData(){
       break;
     }
     Serial.print(node_name_str[NODE][j]);    
-  }  
-  Serial.print("_");
+  }
   Serial.print(ID_NODE);                      //Transfer ID Node
   Serial.print("_");
   Serial.print("DATA");                       //Transfer Data string
@@ -257,6 +332,7 @@ void GetData(){
       Serial.print(analogRead(PIN_L)); 
       break;
     }
+    Serial.println("");                   //End of transfer
   }
   #ifdef DEBUG
     Serial.println("GETDATA OK - End Function");
@@ -264,7 +340,7 @@ void GetData(){
 }
 
 void UpdateData(){
-
+  
 }
 void serialEvent() {
   while (Serial.available()) {    
