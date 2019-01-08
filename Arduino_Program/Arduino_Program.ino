@@ -363,11 +363,11 @@ void GetData(){
       //Get and transfer T data
       Serial.print("T");
       Serial.print("_");
-      Serial.print(analogRead(PIN_T)); 
+      Serial.print(SI7021.readTemperature(SI70xx_TEMP_READ_AFTER_RH_MEASURMENT)); 
       //Get and transfer H data
       Serial.print("H");
       Serial.print("_");
-      Serial.print(analogRead(PIN_H)); 
+      Serial.print(SI7021.readHumidity()); 
       //Get and transfer L data
       Serial.print("L");
       Serial.print("_");
