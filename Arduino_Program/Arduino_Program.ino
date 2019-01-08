@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
+#include <Wire.h>
+#include <HTU21D.h>
+
 #if defined(UBRRH) || defined(UBRR0H)
   extern HardwareSerial Serial;
   #define HAVE_HWSERIAL0
@@ -8,15 +11,15 @@
 //Not modified
 enum node_type {
   RLACS = 0,
-  RLTDS,
-  THL
+  RLTDS = 1,
+  THL = 2
 };
 
 //Modified
 //ID and Type Node
 #define ID_NODE             27
 #define NODE                RLTDS
-#define DEBUG
+//#define DEBUG
 
 //Hardware of RLACS Node
 #define PIN_D1              3
@@ -47,16 +50,41 @@ char command_getData[GETDATA_LEN] = {'G','E','T','D','A','T','A'};
 #define UPDATEDATA_LEN      10
 char command_updatedata[UPDATEDATA_LEN] = {'U','P','D','A','T','E','D','A','T','A'};
 
+//Variable for rec data from UART
 char rec[200];
 unsigned int index_rec = 0;
+
+//Create SI7021 Sensor
+HTU21D SI7021(HTU21D_RES_RH12_TEMP14);
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   
+  //Config Hardware for node
+  switch(NODE){
+    case RLTDS:{      
+      pinMode(PIN_D, OUTPUT);         
+      break;
+    }
+    case RLACS:{
+      pinMode(PIN_D1, OUTPUT);
+      pinMode(PIN_D2, OUTPUT);
+      break;
+    }
+    case THL:{
+      while (SI7021.begin() != true){
+        #ifdef DEBUG
+          Serial.println("SETUP-Not Init SI7021 Sensor");
+        #endif
+      }  
+      break;
+    }
+  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  
   
 }
 
