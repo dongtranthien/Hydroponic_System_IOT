@@ -2,6 +2,7 @@
 #include <HardwareSerial.h>
 #include <Wire.h>
 #include <HTU21D.h>
+#include <BH1750.h>
 
 #if defined(UBRRH) || defined(UBRR0H)
   extern HardwareSerial Serial;
@@ -30,9 +31,7 @@ enum node_type {
 #define PIN_D               5
 #define PIN_TDS             A2
 //Hardware of THL Node
-#define PIN_T               A3
-#define PIN_H               A4
-#define PIN_L               A5
+//None
 
 #define ID_NODE_LENGTH      2
 
@@ -54,8 +53,10 @@ char command_updatedata[UPDATEDATA_LEN] = {'U','P','D','A','T','E','D','A','T','
 char rec[200];
 unsigned int index_rec = 0;
 
-//Create SI7021 Sensor
-HTU21D SI7021(HTU21D_RES_RH12_TEMP14);
+//Create SI7021 Sensor (Humidity and temp sensor)
+HTU21D Humidity_Temp_Sensor(HTU21D_RES_RH12_TEMP14);
+//Create BH1750 Sensor (Light meter)
+BH1750 Light_Sensor;   
 
 void setup() {
   // put your setup code here, to run once:
@@ -73,11 +74,16 @@ void setup() {
       break;
     }
     case THL:{
-      while (SI7021.begin() != true){
+      while (Humidity_Temp_Sensor.begin() != true){
         #ifdef DEBUG
-          Serial.println("SETUP-Not Init SI7021 Sensor");
+          Serial.println("SETUP-Not Init SI7021 - Humidity and Temp Sensor");
         #endif
-      }  
+      } 
+      while(Light_Sensor.begin() != true){
+        #ifdef DEBUG
+          Serial.println("SETUP-Not Init BH1750 - Light Sensor");
+        #endif
+      }
       break;
     }
   }
@@ -360,18 +366,18 @@ void GetData(){
       break;
     }    
     case THL:{                              //THL Node Type
-      //Get and transfer T data
+      //Get and transfer Temp data
       Serial.print("T");
       Serial.print("_");
-      Serial.print(SI7021.readTemperature(SI70xx_TEMP_READ_AFTER_RH_MEASURMENT)); 
-      //Get and transfer H data
+      Serial.print(Humidity_Temp_Sensor.readTemperature(SI70xx_TEMP_READ_AFTER_RH_MEASURMENT)); 
+      //Get and transfer Humidity data
       Serial.print("H");
       Serial.print("_");
-      Serial.print(SI7021.readHumidity()); 
-      //Get and transfer L data
+      Serial.print(Humidity_Temp_Sensor.readHumidity()); 
+      //Get and transfer Light data
       Serial.print("L");
       Serial.print("_");
-      Serial.print(analogRead(PIN_L)); 
+      Serial.print(Light_Sensor.readLightLevel()); 
       break;
     }    
   }
