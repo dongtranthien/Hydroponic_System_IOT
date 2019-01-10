@@ -561,7 +561,7 @@ void UpdateData(){
       if(index_temp1 < 0){
         index_temp1 = index_temp1 + 200;
       }
-      if(rec[index_temp1] == 1){
+      if(rec[index_temp1] == '1'){
         if(len_status_str == 3){
           digitalWrite(PIN_D1, LOW);          
         }
@@ -570,7 +570,7 @@ void UpdateData(){
         }
       }
       else{
-        if(rec[index_temp1] == 2){
+        if(rec[index_temp1] == '2'){
           if(len_status_str == 3){
             digitalWrite(PIN_D2, LOW);          
           }
