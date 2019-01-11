@@ -592,15 +592,14 @@ void UpdateData(){
         #ifdef DEBUG
           Serial.println("UPDATEDATA-ERROR-Pin in node unformatted");
         #endif
-        if(len_status_str == 3){
-          digitalWrite(PIN_D, LOW);          
-        }
-        else{
-          digitalWrite(PIN_D, HIGH);
-        }
         return;
       }
-
+      if(len_status_str == 3){
+        digitalWrite(PIN_D, LOW);          
+      }
+      else{
+        digitalWrite(PIN_D, HIGH);
+      }
       break;
     }
     case THL:{
